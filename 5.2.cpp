@@ -13,7 +13,6 @@ struct Record {
     int key;
     string name;
     string adress;
-
 };
 
 class FileManager {
@@ -38,32 +37,18 @@ Record FileManager::getRecord(int recordOffset, ifstream &fin) {
     fin.seekg(recordOffset); // Устанавливаем позицию чтения в файле на указанное смещение.
 
     // Чтение данных из файла
-    fin.read((char *) &tmp.key, sizeof(int)); // Считываем целое число (int) и сохраняем его в поле key.
+    fin.read(reinterpret_cast<char *>(&tmp.key),
+             sizeof(int)); // Считываем целое число (int) и сохраняем его в поле key.
 
+    // Чтение строки name из файла
+    std::getline(fin, tmp.name, '\0');
 
-    string name; // Создаем строку для хранения данных о название кинотеатра.
-    char ch;
-    fin.get(ch);
-    while (ch != '\0') {
-        name += ch; // Считываем символы до символа '\0' (нулевого символа) и добавляем их к строке name.
-        fin.get(ch);
-    }
-    tmp.name = name; // Присваиваем полученную строку полю name объекта tmp.
-
-    string adresss; // Создаем строку для хранения данных о названии фильма.
-    fin.get(ch);
-    while (ch != '\0') {
-        adresss += ch; // Считываем символы до символа '\0' (нулевого символа) и добавляем их к строке adresss.
-        fin.get(ch);
-    }
-    tmp.adress = adresss; // Присваиваем полученную строку полю adress объекта tmp.
-
-
+    // Чтение строки adress из файла
+    std::getline(fin, tmp.adress, '\0');
 
     lastOffset = fin.tellg();
     return tmp; // Возвращаем объект tmp, содержащий считанные данные.
 }
-
 
 bool FileManager::isUnique(const vector<Record *> &cinemaRecords, int key) {
     for (const Record *record: cinemaRecords) {
@@ -74,7 +59,7 @@ bool FileManager::isUnique(const vector<Record *> &cinemaRecords, int key) {
     return true;
 }
 
-// Функция для создания файла с записями о сеансах
+
 void FileManager::createFile(int N) {
     // Инициализация генератора случайных чисел
     srand(time(0));
@@ -128,26 +113,16 @@ void FileManager::createFile(int N) {
     int i = 0;
 
 
-    while (inputFile >> record.key >> record.name >>
-                     record.adress) {
+    while (inputFile >> record.key >> record.name >> record.adress) {
         if (i == N - 1 or i == N / 2 or i == 0)
             cout << "Код для проверки: " << records[i]->key << endl;
 
-        fout.write((char *) &records[i]->key, sizeof(int));
+        fout.write(reinterpret_cast<char *>(&record.key), sizeof(int));
 
+        fout.write(record.name.c_str(), record.name.size() + 1);
 
-        const char *fio = records[i]->name.c_str();
-        int fiosize = records[i]->name.size();
-        fout.write(fio, fiosize + 1);
+        fout.write(record.adress.c_str(), record.adress.size() + 1);
 
-
-        const char *adress = records[i]->adress.c_str();
-        int adressize = records[i]->adress.size();
-        fout.write(adress, adressize + 1);
-
-
-
-        //cnt++;
         i++;
     }
     // Закрытие файла
@@ -567,90 +542,21 @@ public:
     }
 
     void deleteNode(FileManager &fm) {
-        int for_deleting;
-        cout << "Введите для удаления:";
-        cin >> for_deleting;
-        NodePtr found_node = this->searchTree(for_deleting);
-        if (found_node == nullptr) {
-            cout << "Нету такого элемента!" << endl;
+        ifstream fin("test.bin", ios::binary);
+
+        int keyToDelete;
+        cout << "Введите ключ узла для удаления: ";
+        cin >> keyToDelete;
+
+        NodePtr nodeToDelete = searchTree(keyToDelete);
+        if (nodeToDelete == TNULL) {
+            cout << "Узел с ключом " << keyToDelete << " не найден в дереве." << endl;
+            fin.close();
             return;
         }
-        int skip_offset = found_node->offset / 40;
-        string filename = "test.bin"; // Замените на имя вашего бинарного файла
-        string tempFilename = "test_temp.bin"; // Замените на временное имя файла
-        ifstream fin(filename, ios::binary);
-        ofstream tempFile(tempFilename, std::ios::binary);
 
-        if (!fin || !tempFile) {
-            std::cerr << "Ошибка открытия файлов." << std::endl;
-        }
-        bool flag = false;
-        Record tmp; // Создаем объект структуры Record для хранения данных.
-        for (int i = 0; i < fm.counter; i++) {
-
-            fin.seekg(i * 40); // Устанавливаем позицию чтения в файле на указанное смещение.
-
-            // Чтение данных из файла
-            fin.read((char *) &tmp.key, sizeof(int)); // Считываем целое число (int) и сохраняем его в поле key.
-
-
-            string name; // Создаем строку для хранения данных о название кинотеатра.
-            char ch;
-            fin.get(ch);
-            while (ch != '\0') {
-                name += ch; // Считываем символы до символа '\0' (нулевого символа) и добавляем их к строке name.
-                fin.get(ch);
-            }
-            tmp.name = name; // Присваиваем полученную строку полю name объекта tmp.
-
-            string adress; // Создаем строку для хранения данных о названии фильма.
-            fin.get(ch);
-            while (ch != '\0') {
-                adress += ch; // Считываем символы до символа '\0' (нулевого символа) и добавляем их к строке adress.
-                fin.get(ch);
-            }
-            tmp.adress = adress; // Присваиваем полученную строку полю adress объекта tmp.
-
-
-            if (skip_offset != i) {
-                tempFile.write((char *) &tmp.key, sizeof(int));
-
-                //название кинотеатра
-                const char *fio = tmp.name.c_str();
-                int fiosize = tmp.name.size();
-                tempFile.write(fio, fiosize + 1);
-
-                //название фильма
-                const char *street = tmp.adress.c_str();
-                int streetsize = tmp.adress.size();
-                tempFile.write(street, streetsize + 1);
-
-                if (flag) {
-                    //cout << this->searchTree(tmp.key)->offset << "---" << endl;
-                    this->searchTree(tmp.key)->offset = (i - 1) * 40;
-                    //cout << this->searchTree(tmp.key)->offset << "+++" << endl;
-                }
-            } else {
-                flag = true;
-            }
-
-        }
-
-        // Закрыть файлы
+        deleteNodeHelper(root, keyToDelete);
         fin.close();
-        tempFile.close();
-        if (std::remove(filename.c_str()) != 0) {
-            std::cerr << "Ошибка при удалении исходного файла." << std::endl;
-        }
-        // Заменить исходный файл временным
-        if (std::rename(tempFilename.c_str(), filename.c_str()) != 0) {
-            std::cerr << "Ошибка при переименовании файлов." << std::endl;
-        }
-
-        std::cout << "Строка удалена успешно." << std::endl;
-        deleteNodeHelper(this->root, for_deleting);
-        fm.counter--;
-
     }
 
     void printTree() {
@@ -672,11 +578,12 @@ public:
             Record record = fm.getRecord(found_node->offset, fin);
             cout << found_node->offset;
             std::cout << endl << "Key: " << record.key << ", "
-                      << "FIO: " << record.name << ", "
-                      << "Adress: " << record.adress << endl;
+                      << "Name: " << record.name << ", "
+                      << "Address: " << record.adress << std::endl;
         } else {
             cout << "Узел с ключом " << search_key << " не найден в дереве." << endl;
         }
+
         fin.close();
     }
 };

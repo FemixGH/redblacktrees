@@ -283,7 +283,7 @@ public:
 int main() {
     FileManager fm;
     // Создаем файл с n случайными записями
-    int n = 10; // Замените на нужное количество записей
+    int n = 1000; // Замените на нужное количество записей
     fm.createFile(n);
     ifstream fin("test.bin", ios::binary);
     BinarySearchTree bst("test.bin");
